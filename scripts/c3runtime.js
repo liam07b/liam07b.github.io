@@ -3766,6 +3766,20 @@ err)}}};
 
 {
 self["C3_Shaders"] = {};
+self["C3_Shaders"]["setcolor"] = {
+	glsl: "varying mediump vec2 vTex;\nuniform lowp sampler2D samplerFront;\nuniform lowp vec3 setColor;\nvoid main(void)\n{\nlowp float a = texture2D(samplerFront, vTex).a;\ngl_FragColor = vec4(setColor.r * a, setColor.g * a, setColor.b * a, a);\n}",
+	glslWebGL2: "",
+	wgsl: "%%SAMPLERFRONT_BINDING%% var samplerFront : sampler;\n%%TEXTUREFRONT_BINDING%% var textureFront : texture_2d<f32>;\nstruct ShaderParams {\nsetColor : vec3<f32>\n};\n%%SHADERPARAMS_BINDING%% var<uniform> shaderParams : ShaderParams;\n%%FRAGMENTINPUT_STRUCT%%\n%%FRAGMENTOUTPUT_STRUCT%%\n@fragment\nfn main(input : FragmentInput) -> FragmentOutput\n{\nvar a : f32 = textureSample(textureFront, samplerFront, input.fragUV).a;\nvar output : FragmentOutput;\noutput.color = vec4<f32>(shaderParams.setColor * a, a);\nreturn output;\n}",
+	blendsBackground: false,
+	usesDepth: false,
+	extendBoxHorizontal: 0,
+	extendBoxVertical: 0,
+	crossSampling: false,
+	mustPreDraw: false,
+	preservesOpaqueness: true,
+	animated: false,
+	parameters: [["setColor",0,"color"]]
+};
 
 }
 
@@ -4226,7 +4240,15 @@ self.C3_GetObjectRefTable = function () {
 		C3.Plugins.Button.Acts.SetVisible,
 		C3.Plugins.Button.Cnds.OnClicked,
 		C3.Plugins.System.Acts.RestartLayout,
-		C3.Plugins.System.Acts.ResetGlobals
+		C3.Plugins.System.Acts.ResetGlobals,
+		C3.Plugins.Sprite.Acts.SubInstanceVar,
+		C3.Plugins.Sprite.Acts.SetEffectEnabled,
+		C3.Plugins.System.Acts.Wait,
+		C3.Plugins.Sprite.Cnds.CompareInstanceVar,
+		C3.Plugins.System.Acts.ResetPersisted,
+		C3.Behaviors.EightDir.Acts.SetEnabled,
+		C3.Plugins.System.Acts.SetTimescale,
+		C3.Plugins.Sprite.Acts.SetVisible
 	];
 };
 self.C3_JsPropNameTable = [
@@ -4240,13 +4262,21 @@ self.C3_JsPropNameTable = [
 	{DestroyOutsideLayout: 0},
 	{Sprite: 0},
 	{TiledBackground: 0},
-	{Sprite2: 0},
+	{Lurker: 0},
 	{Fade: 0},
 	{Sprite3: 0},
 	{Score: 0},
 	{Sprite4: 0},
 	{DeathText: 0},
-	{Button: 0}
+	{Button: 0},
+	{HP: 0},
+	{Luncher: 0},
+	{Sprite2: 0},
+	{Sprite5: 0},
+	{Sprite6: 0},
+	{Timer: 0},
+	{Beanado: 0},
+	{Button2: 0}
 ];
 }
 
@@ -4355,6 +4385,10 @@ self.C3_ExpressionFuncs = [
 			const v0 = p._GetNode(0).GetVar();
 			return () => and("Score: ", v0.GetValue());
 		},
+		p => {
+			const v0 = p._GetNode(0).GetVar();
+			return () => and("Time: ", v0.GetValue());
+		},
 		() => 0,
 		() => 1,
 		p => {
@@ -4374,7 +4408,12 @@ self.C3_ExpressionFuncs = [
 			const f1 = p._GetNode(1).GetBoundMethod();
 			return () => f0(f1());
 		},
-		() => ""
+		() => "",
+		() => "SetColor",
+		() => 0.1,
+		() => 10,
+		() => 3,
+		() => 30
 ];
 
 
