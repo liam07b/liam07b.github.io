@@ -4153,6 +4153,28 @@ return o?o["rms"]:0},SampleRate(){return this._sampleRate},CurrentTime(){if(self
 }
 
 {
+'use strict';{const C3=self.C3;const DOM_COMPONENT_ID="user-media";C3.Plugins.UserMedia=class UserMediaPlugin extends C3.SDKDOMPluginBase{constructor(opts){super(opts,DOM_COMPONENT_ID);this._lastStateSequenceNumber=-1;this._videoState=new Map;this.AddElementMessageHandler("video-ready",(sdkInst,e)=>sdkInst._OnVideoReady(e));this._runtime.AddDOMComponentMessageHandler(DOM_COMPONENT_ID,"state",e=>this._OnUpdateState(e))}Release(){super.Release()}_OnUpdateState(stateData){const sequenceNumber=stateData["sequenceNumber"];
+if(sequenceNumber<=this._lastStateSequenceNumber)return;this._lastStateSequenceNumber=sequenceNumber;this._videoState.clear();for(const [idStr,o]of Object.entries(stateData["videoData"]))this._videoState.set(parseInt(idStr,10),o)}_DeleteVideoState(elementId){this._videoState.delete(elementId)}GetVideoState(elementId){return this._videoState.get(elementId)||null}}}{const C3=self.C3;C3.Plugins.UserMedia.Type=class UserMediaType extends C3.SDKTypeBase{constructor(objectClass){super(objectClass)}Release(){super.Release()}OnCreate(){}}}
+{const C3=self.C3;const DOM_COMPONENT_ID="user-media";const tempRect=C3.New(C3.Rect);const tempQuad=C3.New(C3.Quad);C3.Plugins.UserMedia.Instance=class UserMediaInstance extends C3.SDKDOMInstanceBase{constructor(inst,properties){super(inst,DOM_COMPONENT_ID);this._videoSources=[];this._audioSources=[];this._isRequesting=false;this._isVideoReady=false;this._isVideoActive=false;this._videoWidth=0;this._videoHeight=0;this._snapshotUrl="";const rt=this._runtime.Dispatcher();this._disposables=new C3.CompositeDisposable(C3.Disposable.From(rt,
+"renderercontextlost",()=>this._OnRendererContextLost()));this.CreateElement();this._StartTicking()}Release(){this.GetPlugin()._DeleteVideoState(this.GetElementId());this._ReleaseTexture();super.Release()}_MaybeCreateTexture(renderer,w,h){if(this._webGLTexture)if(this._webGLTexture.GetWidth()===w||this._webGLTexture.GetHeight()===h)return;else this._ReleaseTexture();this._webGLTexture=renderer.CreateDynamicTexture(w,h,{sampling:this._runtime.GetSampling(),mipMap:false})}_ReleaseTexture(){if(!this._webGLTexture)return;
+this._runtime.GetRenderer().DeleteTexture(this._webGLTexture);this._webGLTexture=null}GetElementState(){return{}}_OnRendererContextLost(){this._webGLTexture=null}_OnVideoReady(e){if(this._isVideoActive){this._isVideoReady=true;this._videoWidth=e["width"];this._videoHeight=e["height"]}}Draw(renderer){const wi=this.GetWorldInfo();renderer.SetColorFillMode();renderer.SetColorRgba(0,0,0,1);renderer.Quad(wi.GetBoundingQuad());renderer.SetTextureFillMode();renderer.ResetColor();if(!this._isVideoActive||
+!this._isVideoReady)return;let videoWidth=0;let videoHeight=0;let textureData=null;if(this._runtime.IsInWorker()){const state=this.GetMyState();if(!state)return;const imageBitmap=state["imageBitmap"];if(!imageBitmap)return;videoWidth=imageBitmap.width;videoHeight=imageBitmap.height;textureData=imageBitmap}else{const videoElem=self["C3UserMedia_GetVideoElement"](this.GetElementId());if(!videoElem)return;videoWidth=videoElem.videoWidth;videoHeight=videoElem.videoHeight;if(videoWidth<=0||videoHeight<=
+0)return;textureData=videoElem}this._MaybeCreateTexture(renderer,videoWidth,videoHeight);renderer.UpdateTexture(textureData,this._webGLTexture);const videoAspect=videoWidth/videoHeight;const dispWidth=wi.GetWidth();const dispHeight=wi.GetHeight();const dispAspect=dispWidth/dispHeight;let offX=0;let offY=0;let drawWidth=0;let drawHeight=0;if(dispAspect>videoAspect){drawWidth=dispHeight*videoAspect;drawHeight=dispHeight;offX=Math.max(Math.floor((dispWidth-drawWidth)/2),0)}else{drawWidth=dispWidth;drawHeight=
+dispWidth/videoAspect;offY=Math.max(Math.floor((dispHeight-drawHeight)/2),0)}renderer.SetTexture(this._webGLTexture);tempRect.setWH(wi.GetX()+offX,wi.GetY()+offY,drawWidth,drawHeight);tempQuad.setFromRect(tempRect);renderer.Quad(tempQuad)}Tick(){if(this._isVideoActive&&this._isVideoReady){this._runtime.UpdateRender();const state=this.GetMyState();if(state){this._videoWidth=state["width"];this._videoHeight=state["height"]}}}GetMyState(){return this.GetPlugin().GetVideoState(this.GetElementId())}}}
+{const C3=self.C3;C3.Plugins.UserMedia.Cnds={OnApproved(){return true},OnDeclined(){return true},OnMediaSources(){return true},OnSnapshot(){return true},SupportsUserMedia(){return true},SupportsSpeechRecognition(){return false},OnSpeechRecognitionStart(){return true},OnSpeechRecognitionEnd(){return true},OnSpeechRecognitionError(){return true},OnSpeechRecognitionResult(){return true},IsRecognisingSpeech(){return false},OnDeviceLight(){return true},SupportsSpeechSynthesis(){return false},IsSpeaking(){return false},
+OnCanvasRecordingReady(){return true},SupportsCanvasRecording(){return false},IsCanvasRecordFormatSupported(){return false}}}
+{const C3=self.C3;C3.Plugins.UserMedia.Acts={async RequestCamera(sourceIndex,preferredDirection,preferredWidth,preferredHeight,includeMic,micSourceIndex){if(this._isRequesting)return;this._isRequesting=true;sourceIndex=Math.floor(sourceIndex);preferredWidth=Math.floor(preferredWidth);preferredHeight=Math.floor(preferredHeight);const constraints={"video":{}};if(sourceIndex>=0&&sourceIndex<this._videoSources.length){const videoDeviceId=this._videoSources[sourceIndex]["deviceId"];if(videoDeviceId)constraints["video"]["deviceId"]=
+{"exact":videoDeviceId}}if(preferredDirection>0)constraints["video"]["facingMode"]={"ideal":preferredDirection===1?"user":"environment"};if(preferredWidth>0&&preferredHeight>0){constraints["video"]["width"]=preferredWidth;constraints["video"]["height"]=preferredHeight}if(includeMic){constraints["audio"]={};if(micSourceIndex>=0&&micSourceIndex<this._audioSources.length){const audioDeviceId=this._audioSources[micSourceIndex]["deviceId"];if(audioDeviceId)constraints["audio"]["deviceId"]={"exact":audioDeviceId}}}const result=
+await this.PostToDOMElementAsync("request-camera",{"constraints":constraints});this._isRequesting=false;if(result["ok"]){this._isVideoActive=true;this._isVideoReady=false;await this.TriggerAsync(C3.Plugins.UserMedia.Cnds.OnApproved)}else await this.TriggerAsync(C3.Plugins.UserMedia.Cnds.OnDeclined)},async RequestMic(tag,sourceIndex){if(this._isRequesting)return;this._isRequesting=true;sourceIndex=Math.floor(sourceIndex);const constraints={"audio":{}};if(sourceIndex>=0&&sourceIndex<this._audioSources.length){const audioDeviceId=
+this._audioSources[sourceIndex]["deviceId"];if(audioDeviceId)constraints["audio"]["deviceId"]={"exact":audioDeviceId}}const result=await this.PostToDOMElementAsync("request-microphone",{"constraints":constraints,"tag":tag});this._isRequesting=false;if(result["ok"])await this.TriggerAsync(C3.Plugins.UserMedia.Cnds.OnApproved);else await this.TriggerAsync(C3.Plugins.UserMedia.Cnds.OnDeclined)},Stop(){this._isVideoActive=false;this._isVideoReady=false;this._videoWidth=0;this._videoHeight=0;this.PostToDOMElement("stop");
+this._runtime.UpdateRender()},async Snapshot(format,quality){const result=await this.PostToDOMElementAsync("snapshot",{"format":format===0?"image/png":"image.jpeg","quality":quality/100});if(this._snapshotUrl)URL.revokeObjectURL(this._snapshotUrl);this._snapshotUrl=result["snapshotUrl"];await this.TriggerAsync(C3.Plugins.UserMedia.Cnds.OnSnapshot)},async GetMediaSources(){const result=await this.PostToDOMAsync("get-media-sources");this._videoSources=result["videoSources"];this._audioSources=result["audioSources"];
+await this.TriggerAsync(C3.Plugins.UserMedia.Cnds.OnMediaSources)},RequestSpeechRecognition(lang,mode,results){},StepSpeechRecognition(){},SpeakText(text,lang,uri,vol,rate,pitch){},StopSpeaking(){},PauseSpeaking(){},ResumeSpeaking(){},StartRecordingCanvas(){},StopRecordingCanvas(){}}}
+{const C3=self.C3;C3.Plugins.UserMedia.Exps={VideoWidth(){return this._videoWidth},VideoHeight(){return this._videoHeight},SnapshotURL(){return this._snapshotUrl},AudioSourceCount(){return this._audioSources.length},AudioSourceLabelAt(i){i=Math.floor(i);if(i<0||i>=this._audioSources.length)return"";return this._audioSources[i]["label"]},CameraSourceCount(){return this._videoSources.length},CameraSourceLabelAt(i){i=Math.floor(i);if(i<0||i>=this._videoSources.length)return"";return this._videoSources[i]["label"]},
+CameraSourceFacingAt(i){i=Math.floor(i);if(i<0||i>=this._videoSources.length)return"";return this._videoSources[i]["facing"]},FinalTranscript(){return""},InterimTranscript(){return""},SpeechError(){return""},AmbientLux(){return 0},VoiceCount(){return 0},VoiceNameAt(){return""},VoiceLangAt(){return""},VoiceURIAt(){return""},CanvasRecordingURL(){return""}}};
+
+}
+
+{
 'use strict';{const C3=self.C3;C3.Behaviors.EightDir=class EightDirBehavior extends C3.SDKBehaviorBase{constructor(opts){super(opts)}Release(){super.Release()}}}{const C3=self.C3;C3.Behaviors.EightDir.Type=class EightDirType extends C3.SDKBehaviorTypeBase{constructor(behaviorType){super(behaviorType)}Release(){super.Release()}OnCreate(){}}}
 {const C3=self.C3;const C3X=self.C3X;const IBehaviorInstance=self.IBehaviorInstance;const MAX_SPEED=0;const ACCELERATION=1;const DEACCELERATION=2;const DIRECTION=3;const ANGLE_MODE=4;const ALLOW_SLIDING=5;const DEFAULT_CONTROLS=6;const ENABLE=7;C3.Behaviors.EightDir.Instance=class EightDirInstance extends C3.SDKBehaviorInstanceBase{constructor(behInst,properties){super(behInst);this._upKey=false;this._downKey=false;this._leftKey=false;this._rightKey=false;this._ignoreInput=false;this._simUp=false;
 this._simDown=false;this._simLeft=false;this._simRight=false;this._dx=0;this._dy=0;this._maxSpeed=200;this._acc=600;this._dec=500;this._directions=3;this._angleMode=3;this._allowSliding=false;this._defaultControls=true;this._isEnabled=true;if(properties){this._maxSpeed=properties[MAX_SPEED];this._acc=properties[ACCELERATION];this._dec=properties[DEACCELERATION];this._directions=properties[DIRECTION];this._angleMode=properties[ANGLE_MODE];this._allowSliding=!!properties[ALLOW_SLIDING];this._defaultControls=
@@ -4254,6 +4276,31 @@ map.get(this)._SetWaitTime(t)}get waitTime(){return map.get(this)._GetWaitTime()
 }
 
 {
+'use strict';{const C3=self.C3;C3.Behaviors.Anchor=class AnchorBehavior extends C3.SDKBehaviorBase{constructor(opts){super(opts)}Release(){super.Release()}}}{const C3=self.C3;C3.Behaviors.Anchor.Type=class AnchorType extends C3.SDKBehaviorTypeBase{constructor(behaviorType){super(behaviorType)}Release(){super.Release()}OnCreate(){}}}
+{const C3=self.C3;const C3X=self.C3X;const IBehaviorInstance=self.IBehaviorInstance;const ANCHOR_LEFT=0;const ANCHOR_TOP=1;const ANCHOR_RIGHT=2;const ANCHOR_BOTTOM=3;const ENABLE=4;C3.Behaviors.Anchor.Instance=class AnchorInstance extends C3.SDKBehaviorInstanceBase{constructor(behInst,properties){super(behInst);this._anchorLeft=2;this._anchorTop=2;this._anchorRight=0;this._anchorBottom=0;this._isEnabled=true;const bbox=this._inst.GetWorldInfo().GetBoundingBox();this._xLeft=bbox.getLeft();this._yTop=
+bbox.getTop();this._xRight=this._runtime.GetOriginalViewportWidth()-bbox.getLeft();this._yBottom=this._runtime.GetOriginalViewportHeight()-bbox.getTop();this._rDiff=this._runtime.GetOriginalViewportWidth()-bbox.getRight();this._bDiff=this._runtime.GetOriginalViewportHeight()-bbox.getBottom();if(properties){this._anchorLeft=properties[ANCHOR_LEFT];this._anchorTop=properties[ANCHOR_TOP];this._anchorRight=properties[ANCHOR_RIGHT];this._anchorBottom=properties[ANCHOR_BOTTOM];this._isEnabled=!!properties[ENABLE]}const rt=
+this._runtime.Dispatcher();this._disposables=new C3.CompositeDisposable(C3.Disposable.From(rt,"layoutchange",()=>this._OnLayoutChange()));if(this._isEnabled)this._StartTicking()}Release(){super.Release()}SaveToJson(){return{"xl":this._xLeft,"yt":this._yTop,"xr":this._xRight,"yb":this._yBottom,"rd":this._rDiff,"bd":this._bDiff,"al":this._anchorLeft,"at":this._anchorTop,"ar":this._anchorRight,"ab":this._anchorBottom,"e":this._isEnabled}}LoadFromJson(o){this._xLeft=o["xl"];this._yTop=o["yt"];this._xRight=
+o["xr"];this._yBottom=o["yb"];this._rDiff=o["rd"];this._bDiff=o["bd"];this._anchorLeft=o["al"];this._anchorTop=o["at"];this._anchorRight=o["ar"];this._anchorBottom=o["ab"];this._isEnabled=o["e"];if(this._isEnabled)this._StartTicking();else this._StopTicking()}_SetEnabled(e){if(this._isEnabled&&!e){this._isEnabled=false;this._StopTicking()}else if(!this._isEnabled&&e){const bbox=this._inst.GetWorldInfo().GetBoundingBox();this._xLeft=bbox.getLeft();this._yTop=bbox.getTop();this._xRight=this._runtime.GetOriginalViewportWidth()-
+bbox.getLeft();this._yBottom=this._runtime.GetOriginalViewportHeight()-bbox.getTop();this._rDiff=this._runtime.GetOriginalViewportWidth()-bbox.getRight();this._bDiff=this._runtime.GetOriginalViewportHeight()-bbox.getBottom();this._isEnabled=true;this._StartTicking()}}_IsEnabled(){return this._isEnabled}_UpdatePosition(){if(!this._isEnabled)return;const wi=this._inst.GetWorldInfo();const viewport=wi.GetLayer().GetViewport();if(this._anchorLeft===0){const n=viewport.getLeft()+this._xLeft-wi.GetBoundingBox().getLeft();
+if(n!==0){wi.OffsetX(n);wi.SetBboxChanged()}}else if(this._anchorLeft===1){const n=viewport.getRight()-this._xRight-wi.GetBoundingBox().getLeft();if(n!==0){wi.OffsetX(n);wi.SetBboxChanged()}}if(this._anchorTop===0){const n=viewport.getTop()+this._yTop-wi.GetBoundingBox().getTop();if(n!==0){wi.OffsetY(n);wi.SetBboxChanged()}}else if(this._anchorTop===1){const n=viewport.getBottom()-this._yBottom-wi.GetBoundingBox().getTop();if(n!==0){wi.OffsetY(n);wi.SetBboxChanged()}}if(this._anchorRight===1){const n=
+viewport.getRight()-this._rDiff-wi.GetBoundingBox().getRight();if(n!==0){wi.OffsetX(wi.GetOriginX()*n);wi.SetWidth(Math.max(wi.GetWidth()+n),0);wi.SetBboxChanged();this._rDiff=viewport.getRight()-wi.GetBoundingBox().getRight()}}if(this._anchorBottom===1){const n=viewport.getBottom()-this._bDiff-wi.GetBoundingBox().getBottom();if(n!==0){wi.OffsetY(wi.GetOriginY()*n);wi.SetHeight(Math.max(wi.GetHeight()+n,0));wi.SetBboxChanged();this._bDiff=viewport.getBottom()-wi.GetBoundingBox().getBottom()}}}Tick(){this._UpdatePosition()}_OnLayoutChange(){this._UpdatePosition()}GetPropertyValueByIndex(index){switch(index){case ANCHOR_LEFT:return this._anchorLeft;
+case ANCHOR_TOP:return this._anchorTop;case ANCHOR_RIGHT:return this._anchorRight;case ANCHOR_BOTTOM:return this._anchorBottom;case ENABLE:return this._isEnabled}}SetPropertyValueByIndex(index,value){switch(index){case ANCHOR_LEFT:this._anchorLeft=value;break;case ANCHOR_TOP:this._anchorTop=value;break;case ANCHOR_RIGHT:this._anchorRight=value;break;case ANCHOR_BOTTOM:this._anchorBottom=value;break;case ENABLE:this._isEnabled=!!value;if(this._isEnabled)this._StartTicking();else this._StopTicking();
+break}}GetDebuggerProperties(){const prefix="behaviors.anchor";return[{title:"$"+this.GetBehaviorType().GetName(),properties:[{name:prefix+".properties.enabled.name",value:this._IsEnabled(),onedit:v=>this._SetEnabled(v)}]}]}GetScriptInterfaceClass(){return self.IAnchorBehaviorInstance}};const map=new WeakMap;self.IAnchorBehaviorInstance=class IAnchorBehaviorInstance extends IBehaviorInstance{constructor(){super();map.set(this,IBehaviorInstance._GetInitInst().GetSdkInstance())}get isEnabled(){return map.get(this)._IsEnabled()}set isEnabled(e){map.get(this)._SetEnabled(e)}}}
+{const C3=self.C3;C3.Behaviors.Anchor.Cnds={IsEnabled(){return this._IsEnabled()}}}{const C3=self.C3;C3.Behaviors.Anchor.Acts={SetEnabled(e){this._SetEnabled(e!==0)}}}{const C3=self.C3;C3.Behaviors.Anchor.Exps={}};
+
+}
+
+{
+'use strict';{const C3=self.C3;C3.Behaviors.solid=class SolidBehavior extends C3.SDKBehaviorBase{constructor(opts){super(opts)}Release(){super.Release()}}}{const C3=self.C3;C3.Behaviors.solid.Type=class SolidType extends C3.SDKBehaviorTypeBase{constructor(behaviorType){super(behaviorType)}Release(){super.Release()}OnCreate(){}}}
+{const C3=self.C3;const C3X=self.C3X;const IBehaviorInstance=self.IBehaviorInstance;const ENABLE=0;const TAGS=1;const EMPTY_SET=new Set;C3.Behaviors.solid.Instance=class SolidInstance extends C3.SDKBehaviorInstanceBase{constructor(behInst,properties){super(behInst);this.SetEnabled(true);if(properties){this.SetEnabled(properties[ENABLE]);this.SetTags(properties[TAGS])}}Release(){super.Release()}SetEnabled(e){this._inst._SetSolidEnabled(!!e)}IsEnabled(){return this._inst._IsSolidEnabled()}SetTags(tagList){const savedDataMap=
+this._inst.GetSavedDataMap();if(!tagList.trim()){savedDataMap.delete("solidTags");return}let solidTags=savedDataMap.get("solidTags");if(!solidTags){solidTags=new Set;savedDataMap.set("solidTags",solidTags)}solidTags.clear();for(const tag of tagList.split(" "))if(tag)solidTags.add(tag.toLowerCase())}GetTags(){return this._inst.GetSavedDataMap().get("solidTags")||EMPTY_SET}_GetTagsString(){return[...this.GetTags()].join(" ")}SaveToJson(){return{"e":this.IsEnabled()}}LoadFromJson(o){this.SetEnabled(o["e"])}GetPropertyValueByIndex(index){switch(index){case ENABLE:return this.IsEnabled()}}SetPropertyValueByIndex(index,
+value){switch(index){case ENABLE:this.SetEnabled(value);break}}GetDebuggerProperties(){return[{title:"$"+this.GetBehaviorType().GetName(),properties:[{name:"behaviors.solid.properties.enabled.name",value:this.IsEnabled(),onedit:v=>this.SetEnabled(v)},{name:"behaviors.solid.properties.tags.name",value:this._GetTagsString(),onedit:v=>this.SetTags(v)}]}]}GetScriptInterfaceClass(){return self.ISolidBehaviorInstance}};const map=new WeakMap;self.ISolidBehaviorInstance=class ISolidBehaviorInstance extends IBehaviorInstance{constructor(){super();
+map.set(this,IBehaviorInstance._GetInitInst().GetSdkInstance())}set isEnabled(e){map.get(this).SetEnabled(!!e)}get isEnabled(){return map.get(this).IsEnabled()}set tags(str){C3X.RequireString(str);map.get(this).SetTags(str)}get tags(){return map.get(this)._GetTagsString()}}}{const C3=self.C3;C3.Behaviors.solid.Cnds={IsEnabled(){return this.IsEnabled()}}}{const C3=self.C3;C3.Behaviors.solid.Acts={SetEnabled(e){this.SetEnabled(e)},SetTags(tagList){this.SetTags(tagList)}}}
+{const C3=self.C3;C3.Behaviors.solid.Exps={}};
+
+}
+
+{
 const C3 = self.C3;
 self.C3_GetObjectRefTable = function () {
 	return [
@@ -4268,8 +4315,11 @@ self.C3_GetObjectRefTable = function () {
 		C3.Plugins.TiledBg,
 		C3.Behaviors.Fade,
 		C3.Plugins.Text,
+		C3.Behaviors.Anchor,
 		C3.Plugins.Button,
 		C3.Plugins.Audio,
+		C3.Plugins.UserMedia,
+		C3.Behaviors.solid,
 		C3.Plugins.Keyboard.Cnds.IsKeyDown,
 		C3.Behaviors.EightDir.Acts.SimulateControl,
 		C3.Plugins.System.Cnds.EveryTick,
@@ -4283,6 +4333,7 @@ self.C3_GetObjectRefTable = function () {
 		C3.Plugins.Sprite.Acts.Destroy,
 		C3.Plugins.System.Acts.AddVar,
 		C3.Plugins.Audio.Acts.Play,
+		C3.Plugins.System.Acts.Wait,
 		C3.Plugins.System.Cnds.OnLayoutStart,
 		C3.Plugins.Sprite.Acts.SetAngle,
 		C3.Plugins.System.Exps.random,
@@ -4290,6 +4341,7 @@ self.C3_GetObjectRefTable = function () {
 		C3.Plugins.Sprite.Cnds.IsOutsideLayout,
 		C3.Plugins.Sprite.Exps.X,
 		C3.Plugins.Sprite.Exps.Y,
+		C3.Plugins.System.Cnds.CompareVar,
 		C3.Plugins.System.Cnds.Every,
 		C3.Plugins.System.Acts.CreateObject,
 		C3.Plugins.System.Exps.layoutwidth,
@@ -4302,7 +4354,6 @@ self.C3_GetObjectRefTable = function () {
 		C3.Plugins.System.Acts.ResetGlobals,
 		C3.Plugins.Sprite.Acts.SubInstanceVar,
 		C3.Plugins.Sprite.Acts.SetEffectEnabled,
-		C3.Plugins.System.Acts.Wait,
 		C3.Plugins.Sprite.Cnds.CompareInstanceVar,
 		C3.Plugins.System.Acts.ResetPersisted,
 		C3.Plugins.System.Acts.SetTimescale,
@@ -4310,7 +4361,10 @@ self.C3_GetObjectRefTable = function () {
 		C3.Plugins.System.Cnds.OnSignal,
 		C3.Plugins.System.Acts.SubVar,
 		C3.Plugins.System.Cnds.CompareBetween,
-		C3.Plugins.Sprite.Cnds.OnCreated
+		C3.Plugins.Sprite.Cnds.OnCreated,
+		C3.Plugins.System.Acts.GoToLayout,
+		C3.Plugins.Sprite.Acts.SetVisible,
+		C3.Plugins.Audio.Acts.SetMasterVolume
 	];
 };
 self.C3_JsPropNameTable = [
@@ -4327,6 +4381,7 @@ self.C3_JsPropNameTable = [
 	{Lurker: 0},
 	{Fade: 0},
 	{Sprite3: 0},
+	{Anchor: 0},
 	{Score: 0},
 	{Sprite4: 0},
 	{DeathText: 0},
@@ -4340,7 +4395,24 @@ self.C3_JsPropNameTable = [
 	{Beanado: 0},
 	{Button2: 0},
 	{Pew: 0},
-	{Compare: 0}
+	{Button3: 0},
+	{Sprite7: 0},
+	{TiledBackground2: 0},
+	{UserMedia: 0},
+	{Sprite8: 0},
+	{Text: 0},
+	{Button4: 0},
+	{Solid: 0},
+	{Sprite9: 0},
+	{Sprite10: 0},
+	{Sprite11: 0},
+	{Text2: 0},
+	{Button5: 0},
+	{Button6: 0},
+	{Text3: 0},
+	{Sprite12: 0},
+	{Compare: 0},
+	{Fire: 0}
 ];
 }
 
@@ -4456,6 +4528,9 @@ self.C3_ExpressionFuncs = [
 		() => 0,
 		() => 1,
 		() => "oof",
+		() => 0.3,
+		() => -10,
+		() => "pointwin",
 		p => {
 			const f0 = p._GetNode(0).GetBoundMethod();
 			return () => f0(360);
@@ -4463,6 +4538,10 @@ self.C3_ExpressionFuncs = [
 		p => {
 			const n0 = p._GetNode(0);
 			return () => n0.ExpObject();
+		},
+		p => {
+			const v0 = p._GetNode(0).GetVar();
+			return () => Math.pow(1.1, ((-v0.GetValue()) / 20));
 		},
 		p => {
 			const f0 = p._GetNode(0).GetBoundMethod();
@@ -4476,18 +4555,32 @@ self.C3_ExpressionFuncs = [
 		() => "",
 		() => "Death",
 		() => "pop",
+		() => "youthedeath",
 		() => "SetColor",
 		() => 0.1,
-		() => 10,
+		() => 20,
+		p => {
+			const v0 = p._GetNode(0).GetVar();
+			return () => (Math.pow(1.1, ((-v0.GetValue()) / 20)) * 5);
+		},
 		() => 3,
-		() => 30,
+		() => 50,
+		p => {
+			const v0 = p._GetNode(0).GetVar();
+			return () => (Math.pow(1.05, ((-v0.GetValue()) / 20)) * 30);
+		},
+		() => 10,
 		() => 419,
 		() => 293,
 		p => {
 			const v0 = p._GetNode(0).GetVar();
 			return () => v0.GetValue();
 		},
-		() => -1
+		() => -1,
+		p => {
+			const v0 = p._GetNode(0).GetVar();
+			return () => and("Timer: ", v0.GetValue());
+		}
 ];
 
 
